@@ -1,0 +1,60 @@
+version: "3.9"
+services:
+# Partner Portal Website
+  nppwebapp:
+    image: arifurnybsys/partner-portal-webapp:latest
+    container_name: nppwebapp
+    ports:
+      - "300:80"
+      - "3440:443"
+    # env_file:
+    #   - .env.test        
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Test    
+      - API_URL=https://test-cdas-webapi.sentraptt.com
+      - AUTO_DELETE_DAYS=7
+      - CUT_OFF_DAY=24
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    restart: always
+    networks:
+      npp_test_network:
+        ipv4_address: 10.100.10.20
+    volumes:
+      - /var/opt/nybsys/nginx/log:/var/log/nginx
+
+  # Partner Portal Web API Service | Python Fast API
+  nppwebapi:
+    image: arifurnybsys/partner-portal-webapi:latest
+    container_name: nppwebapi
+    ports:
+      - "301:80"
+      - "3441:443"
+    # restart: always    
+    env_file:
+      - .env.test
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Test       
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    restart: always 
+    networks:
+      npp_test_network:
+        ipv4_address: 10.100.10.21
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s     
+
+networks:
+  npp_test_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.100.10.0/24      
